@@ -1,0 +1,10 @@
+ReadMe
+
+This calculator is written in C and designed to be run in Linux. 
+
+Compiling Instructions:
+1. Navigate to the folder containing calculator.c
+2. In command line or terminal, run "gcc calculator.c -o calculator
+
+Running Instructions:
+1. In command line or terminal, run "./calculator"
