@@ -1,34 +1,43 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <float.h>
+#include <ctype.h>
+#include "stack.c"
 #include "calculator.h"
 
 int main() {
     printf("Welcome to the Calculator\n");
 
     char *input = NULL; //The expression input from the user
-    int isValid; //Stores the result of getting the user input
+    int inputLength; //Stores the result of getting the user input
     
     //Continue accepting input until the user enters the exit code
     while(1) {
-        isValid = getInput(&input);
+        inputLength = getInput(&input);
         //If the user 
-        if(isValid == -1) {//User wants to exit
+        if(inputLength == -2) {//User wants to exit
             printf("Thank you for using the calculator. Goodbye.\n");
             return 0;
-        } else if(isValid == 0) {//An error has occurred
+        } else if(inputLength == -1) {//An error has occurred
             continue;//Restart the loop to get new input
-        } else {//The user entered a valid expression
-            evaluateExpression(&input);
+        } else {//The user input was successfully received
+            //Create a string array to store the postfix version of the user input
+            char* postFix = (char *)malloc(inputLength*sizeof(char));
+            if(convertToPostFix(&input, &postFix) == -1) {
+                continue; //The input was invalid. Accept new input again.
+            } else {
+                evaluateExpression(&input);
+            }
         }
     }
 }
 
 /*
 * Get user input from the console
-*
-* Returns 1 if expression was valid
-* Returns 0 if there was an error or expression was invalid
+* exp: A pointer containing a dynamically-allocated char array to store the user input
+* Returns expression length if expression was valid. Example: "2+5" would return 4 (3 characters and a return char)
+* Returns -1 if there was an error or expression was invalid
+* Returns -2 if the user wants to exit
 */
 int getInput(char** exp) {
     //Reset the expression pointer to ensure that the memory is ready to use
@@ -45,7 +54,7 @@ int getInput(char** exp) {
     char ch;
     while((ch = getchar()) != '\n' && ch != EOF) {
         if(ch == 'x') {//If the user inputs the exit character
-            return -1;
+            return -2;
         }
 
         if(length + 1 >= capacity) {//If the user input is about to overflow the pointer
@@ -53,17 +62,124 @@ int getInput(char** exp) {
             (*exp) = (char *)realloc((*exp), capacity * sizeof(char));
             if(exp == NULL) {
                 printf("Memory allocation failed.\n");
-                return 0;
+                return -1;
             }
         }
         (*exp)[length] = ch;
         length++;
     }
+    (*exp)[length] = '\0';//Add the escape character to the end
     printf("User input: %s\n",(*exp));
-    return 1;
+    return length;
 }
 
 double evaluateExpression(char** exp) {
     printf("Evaluate Expression: %s\n", (*exp));
     return 0;
+}
+
+/*
+Convert a standard infix expression to postFix
+Returns -1 if an error has occurred or input was invalid
+*/
+int convertToPostFix(char** input, char** postFix) {
+    Operators operators;
+    initOperator(&operators);
+
+    //Variables to keep track of current location in arrays
+    int postFixIndex = 0;
+    int inputIndex = 0;
+
+    while((*input)[inputIndex] != '\0') {
+        char token = (*input)[inputIndex];
+        if(isNumber(token)) {
+            double value = findNumber((*input), &inputIndex);
+            printf("The number found was: %lf\n", value);
+        } else if(isOperator(token)) {
+            char op = findOperator((*input), &inputIndex);
+            if(op == '\0') {
+                printf("Invalid Operator\n");
+                return -1;
+            }
+            printf("The operator found was: %c\n", op);
+        }
+    }
+    return 0;
+}
+
+bool isNumber(char value) {
+    if(value == '.' || isdigit(value)) return true;
+    else return false;
+}
+
+/*
+Parses through the expression to find the full decimal number starting at index i.
+After the function executes, i will be moved to the next valid index after the number.
+*/
+double findNumber(char* exp, int* i) {
+    double result = 0.0;
+    bool isDecimal = false;
+    double divisor = 1.0;
+
+    //Source for converting from character to int using - '0'
+    //https://www.geeksforgeeks.org/c-program-for-char-to-int-conversion/
+
+    //Keep looking through the expression until a non-number is found
+    while (isNumber(exp[*i])) {
+        if(exp[*i] == '.') {
+            isDecimal = true;//Flip the flag to indicate we are adding the decimal portion
+        } else {
+            if(isDecimal) {
+                divisor *= 10; //Shift the divisor to the next decimal place
+                result += (double)(exp[*i] - '0') / divisor;
+            } else {
+                result = result * 10 + (exp[*i] - '0');
+            }
+        }
+        (*i)++;//Move to the next character
+    }
+
+    return result;
+}
+
+/*
+Checks if a character (value) is the first character of any of the available operators
+Returns true if value does begin an operator
+Returns false if value is not an operator
+*/
+bool isOperator(char value) {
+    if(value == '+' || value == '-' ||
+        value == '*' || value == '/' ||
+        value == 's' || value == 'c' || value == 'l') {
+            return true;
+        } else {
+            return false;
+        }
+}
+
+char findOperator(char* exp, int* i) {
+    //Check for any of the single-character operators
+    if(exp[*i] == '+' || exp[*i] == '-' || exp[*i] == '*' || exp[*i] == '/') {
+        return exp[(*i)++];//Return the operator and move to the next index
+    } 
+
+    if(exp[*i] == 's') {
+        if(exp[*i+1] == 'i' && exp[*i+2] == 'n') {
+            *i += 3;//Move to the end of sin
+            return 's';
+        } else {
+            return '\0';
+        }
+    }
+
+    if(exp[*i] == 'c') {
+        if(exp[*i+1] == 'o' && exp[*i+2] == 's') {
+            *i += 3;//Move to the end of cos
+            return 'c';
+        } else {
+            return '\0';
+        }
+    }
+
+    return '\0';//No valid operator was found
 }
