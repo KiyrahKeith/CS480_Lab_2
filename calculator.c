@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <float.h>
 #include <ctype.h>
-#include "stack.c"
+#include "stack.h"
 #include "calculator.h"
 
 int main() {
@@ -86,6 +86,9 @@ int convertToPostFix(char** input, char** postFix) {
     Operators operators;
     initOperator(&operators);
 
+    Operands operands;
+    initOperand(&operands);
+
     //Variables to keep track of current location in arrays
     int postFixIndex = 0;
     int inputIndex = 0;
@@ -94,16 +97,24 @@ int convertToPostFix(char** input, char** postFix) {
         char token = (*input)[inputIndex];
         if(isNumber(token)) {
             double value = findNumber((*input), &inputIndex);
-            printf("The number found was: %lf\n", value);
+            pushOperand(&operands, value);
+            //printf("The number found was: %lf\n", value);
         } else if(isOperator(token)) {
             char op = findOperator((*input), &inputIndex);
             if(op == '\0') {
                 printf("Invalid Operator\n");
                 return -1;
             }
-            printf("The operator found was: %c\n", op);
+            pushOperator(&operators, op);
+            //printf("The operator found was: %c\n", op);
+        } else {
+            printf("Invalid input\n");
+            return -1;
         }
     }
+    
+    printOperand(&operands);
+    printOperator(&operators);
     return 0;
 }
 
@@ -150,21 +161,28 @@ Returns false if value is not an operator
 bool isOperator(char value) {
     if(value == '+' || value == '-' ||
         value == '*' || value == '/' ||
-        value == 's' || value == 'c' || value == 'l') {
+        value == '^' || value == 's' || 
+        value == 'c' || value == 't' || 
+        value == 'l') {
             return true;
         } else {
             return false;
         }
 }
 
+/*
+Parses through the expression to find the full operator. 
+After the function executes, i will be moved to the next valid index after the number.
+Returns '\0' if the operator is invalid
+*/
 char findOperator(char* exp, int* i) {
     //Check for any of the single-character operators
-    if(exp[*i] == '+' || exp[*i] == '-' || exp[*i] == '*' || exp[*i] == '/') {
+    if(exp[*i] == '+' || exp[*i] == '-' || exp[*i] == '*' || exp[*i] == '/' || exp[*i] == '^') {
         return exp[(*i)++];//Return the operator and move to the next index
     } 
 
     if(exp[*i] == 's') {
-        if(exp[*i+1] == 'i' && exp[*i+2] == 'n') {
+        if(exp[*i+1] == 'i' && exp[*i+2] == 'n') {//Verify that s was the start of the correct "sin" input
             *i += 3;//Move to the end of sin
             return 's';
         } else {
@@ -173,7 +191,7 @@ char findOperator(char* exp, int* i) {
     }
 
     if(exp[*i] == 'c') {
-        if(exp[*i+1] == 'o' && exp[*i+2] == 's') {
+        if(exp[*i+1] == 'o' && exp[*i+2] == 's') {//Verify that c was the start of the correct "cos" input
             *i += 3;//Move to the end of cos
             return 'c';
         } else {
@@ -181,5 +199,39 @@ char findOperator(char* exp, int* i) {
         }
     }
 
+    if(exp[*i] == 't') {
+        if(exp[*i+1] == 'a' && exp[*i+2] == 'n') {//Verify that t was the start of the correct "tan" input
+            *i += 3;//Move to the end of tan
+            return 't';
+        } else {
+            return '\0';
+        }
+    }
+
+    if(exp[*i] == 'l') {
+        if(exp[*i+1] == 'n') { //Check if the input is lin
+            *i += 2; //Move to the end of ln
+            return 'n'; //n character represents ln
+        } else if(exp[*i+1] == 'o' && exp[*i+2] == 'g') {
+            *i += 3; //Move to the end of log
+            return 'l'; //l character represents log_10
+        } else {
+            return '\0'; // Return an error if the l was not part of "ln" or "log"
+        }
+    }
+
     return '\0';//No valid operator was found
+}
+
+/*
+Get the order of operations precedence for each operator
+*/
+int precedence(char op) {
+    if(op == '(' || op == ')') return 6;
+    if(op == '{' || op == '}') return 5;
+    if(op == '^') return 4;
+    if(op == 's' || op == 'c' || op == 't' || op == 'n' || op == 'l') return 3;
+    if(op == '*' || op == '/') return 2;
+    if(op == '+' || op == '-') return 1;
+    return 0;
 }
