@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <float.h>
 #include <ctype.h>
+#include <math.h>
 #include "stack.h"
 #include "calculator.h"
 
@@ -95,26 +96,78 @@ int convertToPostFix(char** input, char** postFix) {
 
     while((*input)[inputIndex] != '\0') {
         char token = (*input)[inputIndex];
+        printf("Deal with %c     ----------------------------\n", token);
         if(isNumber(token)) {
             double value = findNumber((*input), &inputIndex);
             pushOperand(&operands, value);
             //printf("The number found was: %lf\n", value);
         } else if(isOperator(token)) {
-            char op = findOperator((*input), &inputIndex);
+            char op = findOperator(*input, &inputIndex);
             if(op == '\0') {
                 printf("Invalid Operator\n");
                 return -1;
             }
+            printf("The operator found was: %c\n", op);
+            printf("Stack Precedence(%c): %d\n", peekOperator(&operators), precedence(peekOperator(&operators)));
+            printf("Curr Precedence(%c): %d\n", op, precedence(op));
+            while(operators.top >= 0 && 
+                    peekOperator(&operators) != '(' && 
+                    peekOperator(&operators) != '{' && 
+                    precedence(peekOperator(&operators)) >= precedence(op)
+            ) {
+                printf("Evaluate some operators\n");
+                char stackOp = popOperator(&operators);
+                if(isUnary(stackOp)) {
+                    double a = popOperand(&operands);
+                    pushOperand(&operands, evaluateOp(stackOp, a, 0));
+                } else {
+                    double b = popOperand(&operands);
+                    double a = popOperand(&operands);
+                    pushOperand(&operands, evaluateOp(stackOp, a, b));
+                }
+            }
+
             pushOperator(&operators, op);
-            //printf("The operator found was: %c\n", op);
+        } else if(token == '(' || token == '{') {
+            pushOperator(&operators, token);
+            inputIndex++;
+        } else if(token == ')' || token == '}') {
+            while(operators.top >= 0 && peekOperator(&operators) != '(' && peekOperator(&operators) != '{') {
+                char stackOp = popOperator(&operators);
+                if(isUnary(stackOp)) {
+                    double a = popOperand(&operands);
+                    pushOperand(&operands, evaluateOp(stackOp, a, 0));
+                } else {
+                    double b = popOperand(&operands);
+                    double a = popOperand(&operands);
+                    pushOperand(&operands, evaluateOp(stackOp, a, b));
+                }
+            }
+            popOperator(&operators); //Pop the '(' or '{'
+            inputIndex++;
         } else {
             printf("Invalid input\n");
             return -1;
         }
     }
-    
     printOperand(&operands);
     printOperator(&operators);
+
+    while (operators.top >= 0) {
+        char op = popOperator(&operators);
+        if(isUnary(op)) {
+            double a = popOperand(&operands);
+            pushOperand(&operands, evaluateOp(op, a, 0));
+        } else {
+            double b = popOperand(&operands);
+            double a = popOperand(&operands);
+            pushOperand(&operands, evaluateOp(op, a, b));
+        }
+    }
+
+    double result = popOperand(&operands);
+    printf("Final Results: %f\n", result);
+    
     return 0;
 }
 
@@ -158,12 +211,26 @@ Checks if a character (value) is the first character of any of the available ope
 Returns true if value does begin an operator
 Returns false if value is not an operator
 */
-bool isOperator(char value) {
-    if(value == '+' || value == '-' ||
-        value == '*' || value == '/' ||
-        value == '^' || value == 's' || 
-        value == 'c' || value == 't' || 
-        value == 'l') {
+bool isOperator(char op) {
+    if(op == '+' || op == '-' ||
+        op == '*' || op == '/' ||
+        op == '^' || op == 's' || 
+        op == 'c' || op == 't' || 
+        op == 'l' || op == 'n') {
+            return true;
+        } else {
+            return false;
+        }
+}
+
+/*
+Checks if an operator is unary or binary. 
+Examples of unary operators are: sin, cos, tan, ln, and log
+Returns true if an operator is unary, returns false otherwise.*/
+bool isUnary(char op) {
+    if(op == 's' || 
+        op == 'c' || op == 't' || 
+        op == 'l' || op == 'n') {
             return true;
         } else {
             return false;
@@ -234,4 +301,27 @@ int precedence(char op) {
     if(op == '*' || op == '/') return 2;
     if(op == '+' || op == '-') return 1;
     return 0;
+}
+
+double evaluateOp(char op, double a, double b) {
+    printf("%f %c %f\n", a, op, b);
+    switch(op) {
+        case '+': return a+b;
+        case '-': return a-b;
+        case '*': return a*b;
+        case '/': 
+            if (b == 0) {
+                printf("Invalid Operation: Division by 0.\n");
+                return 0;
+            } else {
+                return a/b;
+            }
+        case '^': return pow(a, b);
+        case 's': return sin(a);
+        case 'c': return cos(a);
+        case 't': return tan(a);
+        case 'n': return log(a);
+        case 'l': return log10(a);
+        default: return 0;
+    }
 }
