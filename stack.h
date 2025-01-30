@@ -2,7 +2,7 @@
 #define stack_h
 #include <stdbool.h>
 
-#define MAX 100 // The maximum number of operands and/or operators valid in the expression
+#define MAX 50 // The maximum number of operands and/or operators valid in the expression
 
 // Operand Stack --------------------------------------
 typedef struct{

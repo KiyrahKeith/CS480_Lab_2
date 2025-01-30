@@ -47,7 +47,7 @@ bool isEmptyOperand(Operands* s) {
 void printOperand(Operands* s) {
     printf("Operands: ");
     for(int i = 0; i <= s->top; i++) {
-        printf("%f > ", s->items[i]);
+        printf("%lf > ", s->items[i]);
     }
     printf("\n");
 }

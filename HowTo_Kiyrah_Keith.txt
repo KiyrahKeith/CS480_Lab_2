@@ -1,10 +1,21 @@
 ReadMe
 
 This calculator is written in C and designed to be run in Linux. 
+The GCC compiler should be used.
 
 Compiling Instructions:
 1. Navigate to the folder containing calculator.c
-2. In command line or terminal, run "gcc calculator.c -o calculator
+2. In command line or terminal, run "gcc calculator.c -o calculator -Wall -lm
 
 Running Instructions:
 1. In command line or terminal, run "./calculator"
+
+Testing Instructions:
+1. All test cases previously used are listed in "Test Cases.pdf". The INVALID cases should produce an error message and request a new expression. The VALID cases should evaluate the expression as expected. 
+
+
+Usage Guide:
+Type mathematical instructions into the terminal to receive numerical results. 
+Available operations are +, -, *, /, ^, sin, cos, tan, ln, log, (), and {}
+
+Type x to exit
