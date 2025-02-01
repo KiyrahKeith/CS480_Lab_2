@@ -107,8 +107,8 @@ double evaluateExpression(char** input) {
         } else if(isOperator(token)) {
             char op = '\0';//Stores the current operator
             if(token == '-') {
-                //If the previous token is an operator or the start of the expression, use unary minus
-                if(inputIndex == 0 || isOperator((*input)[inputIndex-1])) {
+                //If the previous token is an operator or the start of the expression or an opening brace, use unary minus
+                if(inputIndex == 0 || isOperator((*input)[inputIndex-1]) || (*input)[inputIndex-1] == '(' || (*input)[inputIndex-1] == '{') {
                     //A unary minus cannot be the end of the expression or followed by a closing bracket
                     //A unary minus cannot be followed by a binary operator
                     if((*input)[inputIndex+1] == '\0' || 
@@ -139,11 +139,9 @@ double evaluateExpression(char** input) {
             ) {
                 char stackOp = popOperator(&operators);
                 if(isUnary(stackOp) || stackOp == 'm') {
-                    printf("Evaluate unary: %c\n", stackOp);
                     double a = popOperand(&operands);
                     pushOperand(&operands, evaluateOp(stackOp, a, 0));
                 } else {
-                    printf("Evaluate binary: %c\n", stackOp);
                     double b = popOperand(&operands);
                     double a = popOperand(&operands);
                     pushOperand(&operands, evaluateOp(stackOp, a, b));
@@ -204,7 +202,6 @@ double evaluateExpression(char** input) {
 
     while (operators.top >= 0) {
         char op = popOperator(&operators);
-        printf("Get operator: %c\n", op);
         double result = NAN;
         if(isUnary(op) || op == 'm') {
             double a = popOperand(&operands);
@@ -309,6 +306,7 @@ bool isOperator(char op) {
         op == '*' || op == '/' ||
         op == '^' || op == 's' || 
         op == 'c' || op == 't' || 
+        op == 'o' || 
         op == 'l' || op == 'n') {
             return true;
         } else {
@@ -323,6 +321,7 @@ Returns true if an operator is unary, returns false otherwise.*/
 bool isUnary(char op) {
     if(op == 's' || 
         op == 'c' || op == 't' || 
+        op == 'o' || 
         op == 'l' || op == 'n') {
             return true;
         } else {
@@ -381,7 +380,12 @@ char findOperator(char* exp, int* i) {
                 *i += 3;//Move to the end of cos
                 result = 'c';
             } else {
-                return '\0';
+                if(exp[*i+1] == 'o' && exp[*i+2] == 't') {//Verify that c was the start of the correct "cot" input
+                *i += 3;//Move to the end of cot
+                result = 'o';//The single-digit symbol for cot is 'o'
+                } else {
+                    return '\0';
+                }
             }
             break;
         case 't': //tan
@@ -421,7 +425,7 @@ Get the order of operations precedence for each operator
 */
 int precedence(char op) {
     if(op == '(' || op == ')' || op == '{' || op == '}') return 6;
-    if(op == 's' || op == 'c' || op == 't' || op == 'n' || op == 'l') return 5;
+    if(op == 's' || op == 'c' || op == 't'  || op == 'o' || op == 'n' || op == 'l') return 5;
     if(op == 'm') return 4;
     if(op == '^') return 3;
     if(op == '*' || op == '/') return 2; //Unary minus is treated as (-1*) so it has the same precedence as multiplication
@@ -472,6 +476,12 @@ double evaluateOp(char op, double a, double b) {
         case 's': return sin(a);
         case 'c': return cos(a);
         case 't': return tan(a);
+        case 'o': 
+            if(tan(a) == 0) {//Check if there will be a division by 0 error
+                return NAN;
+            } else {
+                return 1.0/tan(a);
+            }
         case 'n': 
             //Natural logarithm is only defined for positive numbers.
             if (a > 0) {
