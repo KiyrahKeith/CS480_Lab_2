@@ -5,7 +5,7 @@ The GCC compiler should be used.
 
 Compiling Instructions:
 1. Navigate to the folder containing calculator.c
-2. In command line or terminal, run "gcc calculator.c -o calculator -Wall -lm
+2. In command line or terminal, run "gcc *.c -o calculator -Wall -lm
 
 Running Instructions:
 1. In command line or terminal, run "./calculator"
@@ -16,6 +16,6 @@ Testing Instructions:
 
 Usage Guide:
 Type mathematical instructions into the terminal to receive numerical results. 
-Available operations are +, -, *, /, ^, sin, cos, tan, ln, log, (), and {}
+Available operations are +, -, *, /, ^, sin, cos, tan, cot, ln, log, (), and {}
 
 Type x to exit
