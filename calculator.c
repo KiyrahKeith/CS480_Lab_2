@@ -6,7 +6,8 @@
 #include "stack.h"
 #include "calculator.h"
 
-int main() {
+//For testing, the main function must be commented out so that the entry point of the program can occur in test_calculator.c
+/*int main() {
     printf("Welcome to the Calculator\n");
 
     char *input = NULL; //The expression input from the user
@@ -30,7 +31,7 @@ int main() {
             }
         }
     }
-}
+}*/
 
 /*
 * Get user input from the console
@@ -76,7 +77,6 @@ int getInput(char** exp) {
     (*exp)[length] = '\0';//Add the escape character to the end
     return length;
 }
-
 
 /*
 Evaluate a string of infix mathematical expression
@@ -455,7 +455,7 @@ double evaluateOp(char op, double a, double b) {
                 return a-b;
             }
         case '*': 
-            if(abs(a) > DBL_MAX/abs(b)) {//Check if the multiplication with overflow double
+            if(fabs(a) > DBL_MAX/fabs(b)) {//Check if the multiplication with overflow double
                 return NAN;
             } else {
                 return a*b;
