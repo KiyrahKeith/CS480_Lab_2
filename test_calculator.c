@@ -2,9 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <unistd.h>
 #include "calculator.h"
 
-#define MAX_EXPECTED_RESULT 100
+//#define MAX_EXPECTED_RESULT 100
 #define ACCURACY 3 //The number of rounding digits of accuracy that must be met for an expression result to be classified as "equal"
 
 #define VALID_EXPRESSIONS "valid_expressions.csv"
@@ -32,27 +33,28 @@ ACCURACY determines the number of decimal points required that must match for tw
 
 @param expression The mathematical expression to be tested
 @param expectedResult The value of the result that should be obtained from the test expression.
+@param actualResult The result that is obtained from the calculator. It is a pointer so that it can be passed back to the calling function
 @return true if the results match, and returns false otherwise. 
 */
-bool compareExpression(char* expression, double expectedResult) {
+bool compareExpression(char* expression, double expectedResult, double* calculatorResult) {
     //printf("Compare - Expression: %s\n", expression);
     expectedResult = roundValue(expectedResult, ACCURACY); //Round the expected result to a certain number of decimal places.
 
     //Suppress calculator print output temporarily. This will prevent it from returning error messages for invalid expressions.
     freopen("/dev/null", "w", stdout); 
 
-    double actualResult = evaluateExpression(&expression);
+    *calculatorResult = evaluateExpression(&expression);
 
     //Stop suppressing terminal output
     freopen("/dev/tty", "w", stdout);
     
 
-    actualResult = roundValue(actualResult, ACCURACY);
-    //printf("Actual Result: %f, status: %i\n", actualResult, expectedResult == actualResult);
+    *calculatorResult = roundValue(*calculatorResult, ACCURACY);
+    //printf("Actual Result: %f, status: %i\n", calculatorResult, expectedResult == calculatorResult);
 
     //Returns true if either the expected and actual results match numerically
     //or returns true if both actual and expected are nan
-    return expectedResult == actualResult || (isnan(expectedResult) && isnan(actualResult));
+    return expectedResult == *calculatorResult || (isnan(expectedResult) && isnan(*calculatorResult));
 }
 
 /**
@@ -69,7 +71,8 @@ int testExpressions(char* fileName, char* outputFileName, char* title, int maxLe
     FILE *file;
     char line[maxLength];
     char expression[maxLength];
-    char expected_result[MAX_EXPECTED_RESULT];
+    char expected_result[maxLength];
+    double calculator_result = nan(""); // Stores the result from the calculator
     bool isMatching;//Stores the comparison result of each expression test. True if the expression matches, false otherwise.
     int numMatching = 0;//The number of expressions that match the expected result
     int numNotMatching = 0;//The number of expressions that do not match the expected result
@@ -93,6 +96,13 @@ int testExpressions(char* fileName, char* outputFileName, char* title, int maxLe
         fseek(file, 0, SEEK_SET);
     }
 
+    FILE *outputFile = fopen(outputFileName, "w");
+    if(outputFile == NULL) {
+        perror("Error opening output file");
+        return 1;
+    }
+    fputs("Expression,Calculator Result,Actual Result\n", outputFile); // Add the header row to the output file to improve readability
+
     while (fgets(line, sizeof(line), file)) {
         //printf("Line: %s\n", line);
         line[strcspn(line, "\n")] = '\0'; //Replace any newline characters with termination characters if applicable
@@ -108,7 +118,7 @@ int testExpressions(char* fileName, char* outputFileName, char* title, int maxLe
         int tokenLength = strlen(token);
         
         //If the expression read from the CSV is too long, return an error. 
-        if(tokenLength >= MAX_EXPECTED_RESULT) {
+        if(tokenLength >= maxLength) {
             printf("Error: expression read from CSV is too long. Expression length: %i\n", tokenLength);
         }
         if (token != NULL) {
@@ -120,7 +130,7 @@ int testExpressions(char* fileName, char* outputFileName, char* title, int maxLe
         tokenLength = strlen(token);
         
         //If the expected_result read from the CSV is too long, return an error. 
-        if(tokenLength >= MAX_EXPECTED_RESULT) {
+        if(tokenLength >= maxLength) {
             printf("Error: expected result read from CSV is too long. Result length: %i\n", tokenLength);
         }
         if (token != NULL) {
@@ -129,9 +139,12 @@ int testExpressions(char* fileName, char* outputFileName, char* title, int maxLe
         }
 
         char* resultEndPtr;//Used in the conversion of expected_result from string to double
-        bool isMatching = compareExpression(expression, strtod(expected_result, &resultEndPtr));
+        bool isMatching = compareExpression(expression, strtod(expected_result, &resultEndPtr), &calculator_result);
         if(isMatching) numMatching++;
-        else numNotMatching++;
+        else {//If the expression expected result did not match the calculator's results
+            fprintf(outputFile, "%s, %f, %s", expression, calculator_result, expected_result); //Append the bad expression to the end of the output file so that it can reviewed later
+            numNotMatching++; //Increase the number of expressions that evaluated incorrectly
+        }
     }
     fclose(file); //Close the file after it has been read
 
@@ -177,6 +190,15 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    // Before testing valid expressions, check if the output file already exists and delete it
+    if (access(VALID_EXPRESSIONS_OUTPUT, F_OK) == 0) {
+        // If the file exists, delete it
+        if (remove(VALID_EXPRESSIONS_OUTPUT) != 0) {
+            perror("Error deleting file");
+        }
+    }
+
+    // Test the valid expressions
     if(testExpressions(VALID_EXPRESSIONS, VALID_EXPRESSIONS_OUTPUT, "*********Valid Expressions*********", maxLength)) {
         printf("Error testing valid expressions.\n");
         return 1;
