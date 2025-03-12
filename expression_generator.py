@@ -121,8 +121,6 @@ def randomizeChoice(isValid, char_data, rowNum, choiceRange, isEnd, context):
 
 
             if char_data[rowNum][choice] == '1': # If the random pick was a valid choice
-                print(f"op:{char_data[0][choice]}")
-                
                 if char_data[0][choice].isdigit(): ############ DIGITS
                     # If the choice is a number, switch the context to indicate that a number is being entered. 
                     # This is used to verify proper use of decimal places
