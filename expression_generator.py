@@ -2,12 +2,21 @@ import csv
 import sys 
 import random
 import math
+import signal
 
 ############### Define CSV reading and writing functions ###############
 VALID_FILENAME = "valid_expressions.csv"
 INVALID_FILENAME = "invalid_expressions.csv"
 CHAR_FILENAME = "char_matrix.csv"
 MAX_DOUBLE = sys.float_info.max # The maximum double value allowed
+
+# Custom exception for the timeout
+class TimeoutException(Exception):
+    pass
+
+# Signal handler function
+def timeout_handler(signum, frame):
+    raise TimeoutException("Evaluation timed out")
 
 # Write expressions to a CSV file
 def writeCSV(fileName, data):
@@ -101,16 +110,18 @@ def isFunction(op):
 # @return The index of an appropriate randomized character in char_data
 def randomizeChoice(isValid, char_data, rowNum, choiceRange, isEnd, context):
     choice = -1 # The index of the randomized choice
-    tryCounter = -1 # Keeps track of how many times the loop has tried to choose a valid starting character
+    tryCounter = 0 # Keeps track of how many times the loop has tried to choose a valid starting character
     if isValid: 
         while choice == -1: # Continue randomly selecting a choice until a valid one is found
             tryCounter += 1
-            if rowNum == 1 and tryCounter == 10: # If it's tried to find a valid starting digit too many times and failed
-                choice = random.choice(range(1, 11)) # Choose the random number from only within the digits
+            if tryCounter == 20: # If it's tried to find a valid character too many times and failed
+                return -1
             else:
                 choice = random.choice(choiceRange)
+
+
             if char_data[rowNum][choice] == '1': # If the random pick was a valid choice
-                # print(f"op:{char_data[0][choice]}")
+                print(f"op:{char_data[0][choice]}")
                 
                 if char_data[0][choice].isdigit(): ############ DIGITS
                     # If the choice is a number, switch the context to indicate that a number is being entered. 
@@ -201,6 +212,7 @@ def generateExpression(isValid, char_data, length, choiceRange):
     while len(expression) < length-1:
         # print(f"#### Expression: {expression}      Context[1]: {context[1]}")
         opIndex = randomizeChoice(isValid, char_data, prevRow, choiceRange, False, context)
+        if opIndex == -1: return -1 # Fail safe: if a valid choice could not be found for the next character, return the expression in the current state
         prevRow = opIndex + 2 # The column index + 2 equals the row index to account for the extra "start" and "end" rows
         op = char_data[0][opIndex]
         expression += getOp(op)
@@ -223,7 +235,7 @@ def generateExpression(isValid, char_data, length, choiceRange):
 
     return expression
 
-def evaluate(expression):
+def evaluate(expression, timeout=5):
     # Eval powers must be written as ** instead of ^
     convertedExp = expression.replace('^', '**')
 
@@ -241,11 +253,25 @@ def evaluate(expression):
     # Eval cannot calculate cot, so it must be mathematically replaced with an equivalent
     convertedExp = convertedExp.replace('cot', '1/math.tan')
 
-    result = eval(convertedExp)
-    if abs(result) > MAX_DOUBLE: # If the result exceeds possible bounds for a double
-        return float('nan')
-    else: # If the result is within bounds
-        return result
+    print(f"Converted Expression: {convertedExp}")
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(timeout)  # Set the timeout to 'timeout' seconds
+    
+    # Try to evaluate the expression, but include a timeout
+    try:
+        result = eval(convertedExp)
+        signal.alarm(0)  # Cancel the alarm if eval finishes before the timeout
+
+        if abs(result) > MAX_DOUBLE: # If the result exceeds possible bounds for a double
+            return float('nan')
+        else: # If the result is within bounds
+            return result
+    except TimeoutException: # If the expression could not be evaluated due to timing out
+        return float('nan') # Return nan
+    except Exception as e:
+        return float('nan') # For any other error, also return nan
+
+    
 
 
 
@@ -268,6 +294,7 @@ longest = -1
 while numExpressions < numValid: # Keep generating expressions until the requested number is created
     # print(f"Generate a new expression: # expressions {numExpressions}       # valid: {numValid}")
     newExpression = generateExpression(True, char_data, maxLength, choiceRange)
+    if newExpression == -1: continue # If a new expression couldn't be successfully generated, try again
     # print(newExpression)
     try:
         expectedResult = evaluate(newExpression)
@@ -288,8 +315,36 @@ while numExpressions < numValid: # Keep generating expressions until the request
 
 # print(expressions)
 writeCSV(VALID_FILENAME, expressions)
-print(f"{longest+1}")
 
 ############# Generate Invalid Expression #################
+expressions = [] # Reset all expression variables
+numExpressions = 0
+while numExpressions < numInvalid: # Keep generating expressions until the requested number is created
+    # print(f"Generate a new expression: # expressions {numExpressions}       # valid: {numValid}")
+    newExpression = generateExpression(False, char_data, maxLength, choiceRange)
+    # print(newExpression)
+    try:
+        expectedResult = evaluate(newExpression)
+        if math.isnan(expectedResult): # If the expression could not be evaluated
+            expectedResult = "nan"
+            expressions.append([newExpression, expectedResult])
+            #Keep track of the longest expression or result obtained
+            longest = max(longest, maxLength, len(str(newExpression)) + len(str(expectedResult)) + 1)
+            numExpressions += 1 # The expression was valid, so add it to the total count
+        else: # If the expression could be successfully evaluated
+            # Expressions should only be saved if they are invalid
+            continue # Generate a new random expression without saving this one
+            
+    except Exception as e:
+        # If the expression had an error when evaluating, then that is fine to be saved as an invalid expression
+        expectedResult = "nan"
+        expressions.append([newExpression, expectedResult])
+        #Keep track of the longest expression or result obtained
+        longest = max(longest, maxLength, len(str(newExpression)) + len(str(expectedResult)) + 1)
+        numExpressions += 1 # The expression was valid, so add it to the total count
 
+
+# print(expressions)
+writeCSV(INVALID_FILENAME, expressions)
+print(f"{longest+1}")
 

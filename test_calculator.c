@@ -137,7 +137,18 @@ int testExpressions(char* fileName, char* outputFileName, char* title, int maxLe
             expected_result[tokenLength] = '\0';  // Ensure null-termination
         }
         char* resultEndPtr;//Used in the conversion of expected_result from string to double
-        bool isMatching = compareExpression(expression, strtod(expected_result, &resultEndPtr), &calculator_result);
+
+        bool isMatching = false;
+        if(expected_result == "nan") { // Compare invalid expressions
+            if isnan(calculator_result) { // If it was expected to be nan and it is nan
+                isMatch = true; // Then that's a valid outcome
+            } else {
+                isMatching = false; //If it was expected to be nan but the calculator result isn't nan, that means it's invalid
+            }
+        } else { // Compare valid expressions
+            bool isMatching = compareExpression(expression, strtod(expected_result, &resultEndPtr), &calculator_result);
+        }
+        
         if(isMatching) numMatching++;
         else {//If the expression expected result did not match the calculator's results
             fprintf(outputFile, "%s, %f, %s", expression, calculator_result, expected_result); //Append the bad expression to the end of the output file so that it can reviewed later
@@ -199,6 +210,14 @@ int main(int argc, char *argv[]) {
     // Test the valid expressions
     if(testExpressions(VALID_EXPRESSIONS, VALID_EXPRESSIONS_OUTPUT, "*********Valid Expressions*********", maxLength)) {
         printf("Error testing valid expressions.\n");
+        return 1;
+    }
+
+    printf("\n");
+
+    // Test the invalid expressions
+    if(testExpressions(INVALID_EXPRESSIONS, INVALID_EXPRESSIONS_OUTPUT, "*********Invalid Expressions*********", maxLength)) {
+        printf("Error testing invalid expressions.\n");
         return 1;
     }
 }
