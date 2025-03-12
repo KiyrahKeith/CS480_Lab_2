@@ -125,7 +125,6 @@ int testExpressions(char* fileName, char* outputFileName, char* title, int maxLe
             strncpy(expression, token, tokenLength);
             expression[tokenLength] = '\0';  // Ensure null-termination
         }
-
         token = strtok(NULL, ",");
         tokenLength = strlen(token);
         
@@ -137,7 +136,6 @@ int testExpressions(char* fileName, char* outputFileName, char* title, int maxLe
             strncpy(expected_result, token, tokenLength);
             expected_result[tokenLength] = '\0';  // Ensure null-termination
         }
-
         char* resultEndPtr;//Used in the conversion of expected_result from string to double
         bool isMatching = compareExpression(expression, strtod(expected_result, &resultEndPtr), &calculator_result);
         if(isMatching) numMatching++;
