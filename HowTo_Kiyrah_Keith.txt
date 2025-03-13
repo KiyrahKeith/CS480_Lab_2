@@ -40,3 +40,10 @@ Type mathematical instructions into the terminal to receive numerical results.
 Available operations are +, -, *, /, ^, sin, cos, tan, cot, ln, log, (), and {}
 
 Type x to exit
+
+
+
+PROJECT NOTES
+* The test generator produces 90% invalid instructions consisting of purely valid mathematical symbols and 10% invalid instructions consisting of any letter, number, or symbol. 
+
+* All output for passing and failing both valid and invalid expressions is written into separate CSV files in the "Output" directory. 
