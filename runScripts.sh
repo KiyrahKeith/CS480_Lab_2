@@ -1,15 +1,17 @@
 #!/bin/bash
 
 # Define three variables
-numValid="1"
-numInvalid="1"
+numValid="10"
+numInvalid="10"
 eqLength="25"
 
 # Run Python script and capture output
 python_output=$(python3 expression_generator.py "$numValid" "$numInvalid" "$eqLength" | tail -n 1)
 
+last_two="${python_output: -2}"
+
 # Check if the Python script was successful and returned a value
-if [ $? -eq 0 ]; then
+if [ "$last_two" != " 0" ]; then
     echo "Python script executed successfully, output: $python_output"
     
     # Now use the Python output to compile and run the C script
@@ -23,5 +25,6 @@ if [ $? -eq 0 ]; then
         echo "C program compilation failed."
     fi
 else
+    echo $python_output
     echo "Python script failed."
 fi

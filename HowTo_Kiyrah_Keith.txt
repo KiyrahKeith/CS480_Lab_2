@@ -4,6 +4,19 @@ This calculator is written in C and designed to be run in Linux or MacOS.
 The GCC compiler should be used.
 Python version 3.10 or newer is required.
 
+RUNNING INSTRUCTIONS
+1. Open runScripts.sh
+2. Modify the three variables at the top of the file to input the three parameters.
+	The first parameter is the number of valid expressions to be generated
+	The second parameter is the number of invalid expressions to be generated
+	The third parameter is the length of each expression to be generated
+3. In terminal, navigate to the folder path containing the project files. 
+4. In terminal, run "chmod +x runScripts.sh". This gives the bash file executable permissions
+5. In terminal, run "./runScripts.sh"
+
+
+
+ALTERNATE RUNNING INSTRUCTIONS
 Compiling Instructions:
 1. Navigate to the folder containing calculator.c
 2. In terminal, run "gcc *.c -o test_calculator -lm
@@ -14,23 +27,11 @@ Running Instructions:
 	The second parameter is the number of invalid expressions to be generated
 	The third parameter is the length of each expression to be generated
 
-The final output of the Python program tells the length of the longest line in the CSV (expression+ , + expected result)
+The final output of the Python program tells the length of the longest line in the CSV (expression + , + expected result)
 1. In command line or terminal, run "./test_calculator 1 1 15"
 	The first parameter is the number of valid expressions to be generated
 	The second parameter is the number of invalid expressions to be generated
-	The third parameter is the maximum length of the longest CSV line.
-
-
-ALTERNATE RUNNING INSTRUCTIONS
-1. Open runScripts.sh
-2. Modify the three variables at the top of the file to input the three parameters.
-	The first parameter is the number of valid expressions to be generated
-	The second parameter is the number of invalid expressions to be generated
-	The third parameter is the length of each expression to be generated
-3. In terminal, navigate to the folder path containing the project files. 
-4. In terminal, run "chmod +x runScripts.sh". This gives the bash file executable permissions
-5. In terminal, run "./runScripts.sh"
-
+	The third parameter is the maximum length of the longest CSV line which is the output of the python program.
 
 
 

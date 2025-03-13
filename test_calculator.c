@@ -39,7 +39,6 @@ ACCURACY determines the number of decimal points required that must match for tw
 @return true if the results match, and returns false otherwise. 
 */
 bool compareExpression(char* expression, double expectedResult, double *calculatorResult) {
-    //printf("Compare - Expression: %s\n", expression);
     expectedResult = roundValue(expectedResult, ACCURACY); //Round the expected result to a certain number of decimal places.
     //Suppress calculator print output temporarily. This will prevent it from returning error messages for invalid expressions.
     freopen("/dev/null", "w", stdout); 
@@ -70,8 +69,8 @@ Once all expression are tested, the successful expression statistics are printed
 int testExpressions(char* fileName, char* outputFileName, char* passedOutputFileName, char* title, int maxLength) {
     FILE *file;
     char line[maxLength];
-    char expression[maxLength];
-    char expected_result[maxLength];
+    char expression[maxLength+1];
+    char expected_result[maxLength+1];
     double calculator_result = nan(""); // Stores the result from the calculator
     bool isMatching;//Stores the comparison result of each expression test. True if the expression matches, false otherwise.
     int numMatching = 0;//The number of expressions that match the expected result
@@ -96,6 +95,7 @@ int testExpressions(char* fileName, char* outputFileName, char* passedOutputFile
         fseek(file, 0, SEEK_SET);
     }
 
+    // CSV file to save failed tests
     FILE *outputFile = fopen(outputFileName, "w");
     if(outputFile == NULL) {
         perror("Error opening output file");
@@ -103,6 +103,7 @@ int testExpressions(char* fileName, char* outputFileName, char* passedOutputFile
     }
     fputs("Expression,Calculator Result,Actual Result\n", outputFile); // Add the header row to the output file to improve readability
 
+    // CSV file to save passed tests
     FILE *passedOutputFile = fopen(passedOutputFileName, "w");
     if(passedOutputFile == NULL) {
         perror("Error opening output file");
@@ -111,7 +112,6 @@ int testExpressions(char* fileName, char* outputFileName, char* passedOutputFile
     fputs("Expression,Calculator Result,Actual Result\n", passedOutputFile); // Add the header row to the output file to improve readability
 
     while (fgets(line, sizeof(line), file)) {
-        //printf("Line: %s\n", line);
         line[strcspn(line, "\n")] = '\0'; //Replace any newline characters with termination characters if applicable
 
         // Skip empty lines or lines with only whitespace
@@ -146,13 +146,17 @@ int testExpressions(char* fileName, char* outputFileName, char* passedOutputFile
         char* resultEndPtr;//Used in the conversion of expected_result from string to double
 
         bool isMatching = false;
-        // printf("Expected result: %s\n", expected_result);
-        // printf("strcmp: %i", strcmp(expected_result,"nan"));
-        if(strcmp(expected_result,"nan") == 0) { // Compare invalid expressions
+
+        if(expected_result[0] == 'n' && expected_result[1] == 'a' && expected_result[2] == 'n') { // Compare invalid expressions
             if isnan(calculator_result) { // If it was expected to be nan and it is nan
                 isMatching = true; // Then that's a valid outcome
+                // For matching invalid expressions, these must be written to the file with the string "nan" because file writing when double in not a number leads to unexpected output.
+                fprintf(passedOutputFile, "%s, %s, %s", expression, "nan", expected_result); //Append the bad expression to the end of the output file so that it can reviewed later
+                numMatching++;
+                continue;
             } else {
                 isMatching = false; //If it was expected to be nan but the calculator result isn't nan, that means it's invalid
+                printf("Failed invalid expression\n");
             }
         } else { // Compare valid expressions
             isMatching = compareExpression(expression, strtod(expected_result, &resultEndPtr), &calculator_result);

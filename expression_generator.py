@@ -50,27 +50,27 @@ def readCSV(fileName):
 
 ################## Get command line parameters ##########################
 if len(sys.argv) != 4:
-    print("Error: script must be run with 3 command line arguments: \n1. # valid expressions, \n2. # invalid expressions \n3. maximum length of a single expression.")
-    sys.exit(1) 
+    print("Error: script must be run with 3 command line arguments: \n1. # valid expressions, \n2. # invalid expressions \n3. maximum length of a single expression. 0")
+    sys.exit(0) 
 
 try:
     numValid = int(sys.argv[1])
     if numValid <= 0:
-        print("Error: Number of Valid expressions must be a positive integer.")
-        sys.exit(1)
+        print("Error: Number of Valid expressions must be a positive integer. 0")
+        sys.exit(0)
 
     numInvalid = int(sys.argv[2])
     if numInvalid <= 0:
-        print("Error: Number of Invalid expressions must be a positive integer.")
-        sys.exit(1)
+        print("Error: Number of Invalid expressions must be a positive integer. 0")
+        sys.exit(0)
 
     maxLength = int(sys.argv[3])
     if maxLength <= 0:
-        print("Error: Maximum expression length must be a positive integer.")
-        sys.exit(1)
+        print("Error: Maximum expression length must be a positive integer. 0")
+        sys.exit(0)
 except ValueError:
-    print("All command line arguments must be integers.")
-    sys.exit(1)
+    print("All command line arguments must be integers. 0")
+    sys.exit(0)
 ###########################################################################
 # Tests if an operator is multi-digit (such as sin, cos, ln). 
 # @param op The operator to be converted
@@ -141,7 +141,6 @@ def randomizeChoice(isValid, char_data, rowNum, choiceRange, isEnd, context):
                     elif context[0] == 1: # If you're entering a number and this is the first period
                         context[0] = 2 # Update the context to include a period
                 elif isFunction(char_data[0][choice]): #  If the choice is a function that requires parenthesis
-                    # print("Function")
                     context[1] += '(' # Add another open parenthesis to the context. getOp will handle adding the actual ( to the expression.
 
                 else: # If the char is anything but a digit, a period, or a function
@@ -149,33 +148,26 @@ def randomizeChoice(isValid, char_data, rowNum, choiceRange, isEnd, context):
 
                     # If the choice is a parenthesis/bracket ############# PARENTHESIS/BRACKET
                     if char_data[0][choice] == '(' or char_data[0][choice] == '{':
-                        # print(F"Open bracket: {char_data[0][choice]}") # DEBUG
                         context[1] += char_data[0][choice] # Add the open parenthesis to the context
 
                     elif char_data[0][choice] == ')': # Closing parenthesis
-                        # print(F"Closing parenthesis: {char_data[0][choice]}") # DEBUG
                         if len(context[1]) == 0: # If an open parenthesis hasn't already been added
                             choice = -1
                             continue # Then any closing bracket is invalid, so select a new random character
                         if context[1][-1] == '(': # if the last added bracket was a matching open parenthesis
                             # The closing parenthesis is valid, so remove its matching open brace
-                            # print(f"Remove a parenthesis before: {context[1]}")
                             context[1] = context[1][:-1] # Remove the last character in the parenthesis list
-                            # print(f"Remove a parenthesis after: {context[1]}")
                         else: # If the last added bracket was an opening curly bracket {
                             choice = -1
                             continue # Then any closing bracket is invalid, so select a new random character
 
                     elif char_data[0][choice] == '}': # Closing parenthesis
-                        # print(F"Closing bracket: {char_data[0][choice]}") # DEBUG
                         if len(context[1]) == 0: # If an open parenthesis hasn't already been added
                             choice = -1
                             continue # Then any closing bracket is invalid, so select a new random character
                         if context[1][-1] == '{': # if the last added bracket was a matching open bracket
                             # The closing bracket is valid, so remove its matching open brace
-                            # print(f"Remove a brace before: {context[1]}")
                             context[1] = context[1][:-1] # Remove the last character in the parenthesis list
-                            # print(f"Remove a brace after: {context[1]}")
                         else: # If the last added bracket was an opening parenthesis (
                             choice = -1
                             continue # Then any closing bracket is invalid, so select a new random character    
@@ -214,7 +206,6 @@ def generateExpression(isValid, char_data, length, choiceRange):
     
     # Select all of the middle characters
     while len(expression) < length-1:
-        # print(f"#### Expression: {expression}      Context[1]: {context[1]}")
         opIndex = randomizeChoice(isValid, char_data, prevRow, choiceRange, False, context)
         if opIndex == -1: return -1 # Fail safe: if a valid choice could not be found for the next character, return the expression in the current state
         prevRow = opIndex + 2 # The column index + 2 equals the row index to account for the extra "start" and "end" rows
@@ -225,17 +216,14 @@ def generateExpression(isValid, char_data, length, choiceRange):
     op = char_data[0][randomizeChoice(isValid, char_data, prevRow, choiceRange, True, context)]
     expression += getOp(op)
 
-    # print(f"Initial expression: {expression}        Context[1]: {context[1]}") # DEBUG
     # After the full expression has been generated, use context[1] data to close any remaining parenthesis
     while len(context[1]) > 0: # If there are any opening brackets left that haven't been closed
-        # print("Add an extra closing bracket")
         if context[1][-1] == '(':
             expression += ')'
 
         else: # If the last char is an opening curly bracket
             expression += '}'
         context[1] = context[1][:-1] # Remove the last character in the parenthesis list
-    # print(f"Final expression:{expression}") # DEBUG
 
     return expression
 
@@ -243,7 +231,7 @@ def generateExpression(isValid, char_data, length, choiceRange):
 # @param length The length of the random string
 # @return Returns a string of random characters 
 def generateRandomString(length): 
-    allChoices = string.ascii_letters + string.digits + "!@#$%^&*()_+=|?><,.:;"
+    allChoices = string.ascii_letters + string.digits + "!@#$%^&*()_+=|?><.:;"
     resultLength = 0  # The length of the current string
     result = ""
 
@@ -252,7 +240,6 @@ def generateRandomString(length):
         result += c
         resultLength += 1
     
-    print(f"Random string:{result}")
     return result
 
 
@@ -280,7 +267,6 @@ def evaluate(expression, timeout=2):
     # Eval cannot calculate cot, so it must be mathematically replaced with an equivalent
     convertedExp = convertedExp.replace('cot', '1/math.tan')
 
-    print(f"Converted Expression: {convertedExp}")
     signal.signal(signal.SIGALRM, timeout_handler)
     signal.alarm(timeout)  # Set the timeout to 'timeout' seconds
     
@@ -319,27 +305,22 @@ choiceRange = list(range(1, int(char_data[0][0].lstrip('\ufeff'))+1))
 numExpressions = 0
 longest = -1
 while numExpressions < numValid: # Keep generating expressions until the requested number is created
-    # print(f"Generate a new expression: # expressions {numExpressions}       # valid: {numValid}")
     newExpression = generateExpression(True, char_data, maxLength, choiceRange)
     if newExpression == -1: continue # If a new expression couldn't be successfully generated, try again
-    # print(newExpression)
+
     try:
         expectedResult = evaluate(newExpression)
         if math.isnan(expectedResult): # If the expression could not be evaluated
-            # print("Expression couldn't be successfully evaluated.")
             continue # Generate a new random expression without saving this one
         else: # If the expression could be successfully evaluated
-            # print("-----SUCCESS-----")
+
             expressions.append([newExpression, expectedResult])
             #Keep track of the longest expression or result obtained
             longest = max(longest, maxLength, len(str(newExpression)) + len(str(expectedResult)) + 1)
             numExpressions += 1 # The expression was valid, so add it to the total count
     except Exception as e:
-        # print(f"This expression isn't actually valid: {newExpression}")
-        # print(f"Error code: {e}")
         continue # Go directly to the next loop to try to generate a new expression
 
-# print(expressions)
 writeCSV(VALID_FILENAME, expressions)
 
 ############# Generate Invalid Expression #################
@@ -349,12 +330,10 @@ numMath = math.floor(numInvalid*0.9) # 90% of the expressions should be generate
  # The remaining 10% of invalid expressions should be purely random characters (letters, symbols, etc)
 
 while numExpressions < numInvalid: # Keep generating expressions until the requested number is created
-    # print(f"Generate a new expression: # expressions {numExpressions}       # valid: {numValid}")
     if numExpressions < numMath:
         newExpression = generateExpression(False, char_data, maxLength, choiceRange)
     else: 
         newExpression = generateRandomString(maxLength)
-    # print(newExpression)
     try:
         expectedResult = evaluate(newExpression)
         if math.isnan(expectedResult): # If the expression could not be evaluated
@@ -369,14 +348,12 @@ while numExpressions < numInvalid: # Keep generating expressions until the reque
             
     except Exception as e:
         # If the expression had an error when evaluating, then that is fine to be saved as an invalid expression
-        expectedResult = "nan"
+        expectedResult = "nan\0"
         expressions.append([newExpression, expectedResult])
         #Keep track of the longest expression or result obtained
         longest = max(longest, maxLength, len(str(newExpression)) + len(str(expectedResult)) + 1)
         numExpressions += 1 # The expression was valid, so add it to the total count
 
 
-# print(expressions)
 writeCSV(INVALID_FILENAME, expressions)
 print(f"{longest+1}")
-
