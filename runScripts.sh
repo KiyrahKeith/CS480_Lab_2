@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Define three variables
-numValid="5"
+numValid="1"
 numInvalid="1"
-eqLength="20"
+eqLength="25"
 
 # Run Python script and capture output
 python_output=$(python3 expression_generator.py "$numValid" "$numInvalid" "$eqLength" | tail -n 1)

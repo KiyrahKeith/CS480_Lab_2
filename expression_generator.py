@@ -3,10 +3,11 @@ import sys
 import random
 import math
 import signal
+import string
 
 ############### Define CSV reading and writing functions ###############
-VALID_FILENAME = "valid_expressions.csv"
-INVALID_FILENAME = "invalid_expressions.csv"
+VALID_FILENAME = "Output/valid_expressions.csv"
+INVALID_FILENAME = "Output/invalid_expressions.csv"
 CHAR_FILENAME = "char_matrix.csv"
 MAX_DOUBLE = sys.float_info.max # The maximum double value allowed
 
@@ -19,6 +20,8 @@ def timeout_handler(signum, frame):
     raise TimeoutException("Evaluation timed out")
 
 # Write expressions to a CSV file
+# @param The path of the csv file to be written
+# @param data The content of the file to be written to the csv
 def writeCSV(fileName, data):
     with open(fileName, mode='w', newline='') as file:
         writer = csv.writer(file)
@@ -26,6 +29,9 @@ def writeCSV(fileName, data):
     
     print(fileName, "successfully written.")
 
+# Reads all content from a csv into an array
+# @param The path of the csv file to be read.
+# @return An array containing the contents of the entire csv
 def readCSV(fileName):
     data = [] # Stores the contents of the CSV file
 
@@ -233,7 +239,30 @@ def generateExpression(isValid, char_data, length, choiceRange):
 
     return expression
 
-def evaluate(expression, timeout=5):
+# Generates a string of random characters that can be alphanumeric or symbols
+# @param length The length of the random string
+# @return Returns a string of random characters 
+def generateRandomString(length): 
+    allChoices = string.ascii_letters + string.digits + "!@#$%^&*()_+=|?><,.:;"
+    resultLength = 0  # The length of the current string
+    result = ""
+
+    while resultLength < length:
+        c = random.choice(allChoices)
+        result += c
+        resultLength += 1
+    
+    print(f"Random string:{result}")
+    return result
+
+
+# Evaluate an expression using Python's eval function. 
+# The expression is manually modified to make the syntax temporarily suitable format for use in eval
+# If eval takes more than the timeout value in seconds to evaluate, then the function immediately exits with an error code.
+# @param expression The mathematical expression to be evaluated
+# @param timeout The time (in seconds) to wait before exiting with a timeout
+# @return The result of the expression evaluation. Returns nan if the evaluation times out.
+def evaluate(expression, timeout=2):
     # Eval powers must be written as ** instead of ^
     convertedExp = expression.replace('^', '**')
 
@@ -310,16 +339,21 @@ while numExpressions < numValid: # Keep generating expressions until the request
         # print(f"Error code: {e}")
         continue # Go directly to the next loop to try to generate a new expression
 
-
 # print(expressions)
 writeCSV(VALID_FILENAME, expressions)
 
 ############# Generate Invalid Expression #################
 expressions = [] # Reset all expression variables
 numExpressions = 0
+numMath = math.floor(numInvalid*0.9) # 90% of the expressions should be generated from within valid mathematical symbols
+ # The remaining 10% of invalid expressions should be purely random characters (letters, symbols, etc)
+
 while numExpressions < numInvalid: # Keep generating expressions until the requested number is created
     # print(f"Generate a new expression: # expressions {numExpressions}       # valid: {numValid}")
-    newExpression = generateExpression(False, char_data, maxLength, choiceRange)
+    if numExpressions < numMath:
+        newExpression = generateExpression(False, char_data, maxLength, choiceRange)
+    else: 
+        newExpression = generateRandomString(maxLength)
     # print(newExpression)
     try:
         expectedResult = evaluate(newExpression)

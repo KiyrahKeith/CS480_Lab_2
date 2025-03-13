@@ -8,10 +8,12 @@
 //#define MAX_EXPECTED_RESULT 100
 #define ACCURACY 3 //The number of rounding digits of accuracy that must be met for an expression result to be classified as "equal"
 
-#define VALID_EXPRESSIONS "valid_expressions.csv"
-#define INVALID_EXPRESSIONS "invalid_expressions.csv"
-#define VALID_EXPRESSIONS_OUTPUT "failed_valid_expressions.csv"
-#define INVALID_EXPRESSIONS_OUTPUT "failed_invalid_expressions.csv"
+#define VALID_EXPRESSIONS "Output/valid_expressions.csv"
+#define INVALID_EXPRESSIONS "Output/invalid_expressions.csv"
+#define VALID_EXPRESSIONS_OUTPUT "Output/failed_valid_expressions.csv"
+#define INVALID_EXPRESSIONS_OUTPUT "Output/failed_invalid_expressions.csv"
+#define PASSED_VALID_EXPRESSIONS_OUTPUT "Output/passed_valid_expressions.csv"
+#define PASSED_INVALID_EXPRESSIONS_OUTPUT "Output/passed_invalid_expressions.csv"
 
 /**
 Rounds a double value to a certain number of precision. If the value is NaN, then NaN is returned instead.
@@ -36,10 +38,9 @@ ACCURACY determines the number of decimal points required that must match for tw
 @param actualResult The result that is obtained from the calculator. It is a pointer so that it can be passed back to the calling function
 @return true if the results match, and returns false otherwise. 
 */
-bool compareExpression(char* expression, double expectedResult, double* calculatorResult) {
+bool compareExpression(char* expression, double expectedResult, double *calculatorResult) {
     //printf("Compare - Expression: %s\n", expression);
     expectedResult = roundValue(expectedResult, ACCURACY); //Round the expected result to a certain number of decimal places.
-
     //Suppress calculator print output temporarily. This will prevent it from returning error messages for invalid expressions.
     freopen("/dev/null", "w", stdout); 
 
@@ -49,12 +50,11 @@ bool compareExpression(char* expression, double expectedResult, double* calculat
     freopen("/dev/tty", "w", stdout);
     
 
-    *calculatorResult = roundValue(*calculatorResult, ACCURACY);
-    //printf("Actual Result: %f, status: %i\n", calculatorResult, expectedResult == calculatorResult);
-
+    double roundedCalculatorResult = roundValue(*calculatorResult, ACCURACY);
+    
     //Returns true if either the expected and actual results match numerically
     //or returns true if both actual and expected are nan
-    return expectedResult == *calculatorResult || (isnan(expectedResult) && isnan(*calculatorResult));
+    return expectedResult == roundedCalculatorResult || (isnan(expectedResult) && isnan(roundedCalculatorResult));
 }
 
 /**
@@ -67,7 +67,7 @@ Once all expression are tested, the successful expression statistics are printed
 
 @return 0 if expression evaluation was successful. Returns 1 if any errors occured. 
 */
-int testExpressions(char* fileName, char* outputFileName, char* title, int maxLength) {
+int testExpressions(char* fileName, char* outputFileName, char* passedOutputFileName, char* title, int maxLength) {
     FILE *file;
     char line[maxLength];
     char expression[maxLength];
@@ -102,6 +102,13 @@ int testExpressions(char* fileName, char* outputFileName, char* title, int maxLe
         return 1;
     }
     fputs("Expression,Calculator Result,Actual Result\n", outputFile); // Add the header row to the output file to improve readability
+
+    FILE *passedOutputFile = fopen(passedOutputFileName, "w");
+    if(passedOutputFile == NULL) {
+        perror("Error opening output file");
+        return 1;
+    }
+    fputs("Expression,Calculator Result,Actual Result\n", passedOutputFile); // Add the header row to the output file to improve readability
 
     while (fgets(line, sizeof(line), file)) {
         //printf("Line: %s\n", line);
@@ -139,18 +146,22 @@ int testExpressions(char* fileName, char* outputFileName, char* title, int maxLe
         char* resultEndPtr;//Used in the conversion of expected_result from string to double
 
         bool isMatching = false;
-        if(expected_result == "nan") { // Compare invalid expressions
+        // printf("Expected result: %s\n", expected_result);
+        // printf("strcmp: %i", strcmp(expected_result,"nan"));
+        if(strcmp(expected_result,"nan") == 0) { // Compare invalid expressions
             if isnan(calculator_result) { // If it was expected to be nan and it is nan
-                isMatch = true; // Then that's a valid outcome
+                isMatching = true; // Then that's a valid outcome
             } else {
                 isMatching = false; //If it was expected to be nan but the calculator result isn't nan, that means it's invalid
             }
         } else { // Compare valid expressions
-            bool isMatching = compareExpression(expression, strtod(expected_result, &resultEndPtr), &calculator_result);
+            isMatching = compareExpression(expression, strtod(expected_result, &resultEndPtr), &calculator_result);
         }
         
-        if(isMatching) numMatching++;
-        else {//If the expression expected result did not match the calculator's results
+        if(isMatching) {
+            fprintf(passedOutputFile, "%s, %f, %s", expression, calculator_result, expected_result); //Append the bad expression to the end of the output file so that it can reviewed later
+            numMatching++;
+        } else {//If the expression expected result did not match the calculator's results
             fprintf(outputFile, "%s, %f, %s", expression, calculator_result, expected_result); //Append the bad expression to the end of the output file so that it can reviewed later
             numNotMatching++; //Increase the number of expressions that evaluated incorrectly
         }
@@ -208,7 +219,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Test the valid expressions
-    if(testExpressions(VALID_EXPRESSIONS, VALID_EXPRESSIONS_OUTPUT, "*********Valid Expressions*********", maxLength)) {
+    if(testExpressions(VALID_EXPRESSIONS, VALID_EXPRESSIONS_OUTPUT, PASSED_VALID_EXPRESSIONS_OUTPUT, "*********Valid Expressions*********", maxLength)) {
         printf("Error testing valid expressions.\n");
         return 1;
     }
@@ -216,7 +227,7 @@ int main(int argc, char *argv[]) {
     printf("\n");
 
     // Test the invalid expressions
-    if(testExpressions(INVALID_EXPRESSIONS, INVALID_EXPRESSIONS_OUTPUT, "*********Invalid Expressions*********", maxLength)) {
+    if(testExpressions(INVALID_EXPRESSIONS, INVALID_EXPRESSIONS_OUTPUT, PASSED_INVALID_EXPRESSIONS_OUTPUT, "*********Invalid Expressions*********", maxLength)) {
         printf("Error testing invalid expressions.\n");
         return 1;
     }
